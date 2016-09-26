@@ -22,8 +22,6 @@ public class ReentrantReadWriteLock {
 	private Map<Thread,Integer> writingThread;
 	private volatile int numberOfReaders;
 	private volatile int numberOfWriters;
-	private volatile int numberOfReadersRequested;
-	private volatile int numberOfWritersRequested;
 	
 	/**
 	 * Constructor for ReentrantReadWriteLock
@@ -34,8 +32,6 @@ public class ReentrantReadWriteLock {
 		writingThread = new HashMap<Thread,Integer>();
 		numberOfReaders = 0;
 		numberOfWriters = 0;
-		numberOfReadersRequested = 0;
-		numberOfWritersRequested = 0;
 	}
 
 	/**
@@ -68,13 +64,16 @@ public class ReentrantReadWriteLock {
 	 */
 	public synchronized boolean tryAcquiringReadLock() {
 		// FILL IN CODE
+		Thread currentthread =Thread.currentThread();
 		if (writingThread.containsKey(Thread.currentThread())) {
-			incrementNumberOfReadersRequested();
+			getSetReadingCount(currentthread);
+			incrementNumberOfReadLocks();
 			return true;
-		} else if(numberOfWriters > 0 || numberOfWritersRequested > 0) {
+		} else if(numberOfWriters > 0) {
 			return false;
 		} else {
-			incrementNumberOfReadersRequested();
+			getSetReadingCount(currentthread);
+			incrementNumberOfReadLocks();
 			return true;
 		}
 		// don't forget to change it
@@ -88,14 +87,16 @@ public class ReentrantReadWriteLock {
 	 */
 	public synchronized boolean tryAcquiringWriteLock() {
 		// FILL IN CODE
+		Thread currentthread = Thread.currentThread();
 		if (writingThread.containsKey(Thread.currentThread())) {
-			incrementNumberOfWritersRequested();
+			getWritingCount(currentthread);
+			incrementNumberOfWriteLocks();
 			return true;
-		} else if (numberOfWriters > 0 || numberOfReaders > 0 || 
-				numberOfWritersRequested > 0 || numberOfReadersRequested > 0) {
+		} else if (numberOfWriters > 0 || numberOfReaders > 0) {
 			return false;
 		} else {
-			incrementNumberOfWritersRequested();
+			getWritingCount(currentthread);
+			incrementNumberOfWriteLocks();
 			return true;
 		}
 		// don't forget to change it
@@ -117,10 +118,7 @@ public class ReentrantReadWriteLock {
 				e.printStackTrace();
 			}
 		}
-		Thread currentthread =Thread.currentThread(); 
-		getSetReadingCount(currentthread);
-		decrementNumberOfReadersRequested();
-		incrementNumberOfReadLocks();
+		
 	}
 
 	private Integer getSetReadingCount(Thread currentthread) {
@@ -167,10 +165,7 @@ public class ReentrantReadWriteLock {
 				e.printStackTrace();
 			}			
 		}
-		Thread currentthread = Thread.currentThread();
-		getWritingCount(currentthread);
-		decrementNumberOfWritersRequested();
-		incrementNumberOfWriteLocks();
+		
 	}
 
 	private Integer getWritingCount(Thread currentthread) {
@@ -201,47 +196,25 @@ public class ReentrantReadWriteLock {
 		notifyAll();
 	}
 	
-	public void incrementNumberOfReadLocks() {
+	private void incrementNumberOfReadLocks() {
 		synchronized(countLock) {
 			numberOfReaders++;
 		}
 	}
-	public void decrementNumberOfReadLocks() {
+	private void decrementNumberOfReadLocks() {
 		synchronized(countLock) {
 			numberOfReaders--;
 		}
 	}
 	
-	public void incrementNumberOfWriteLocks() {
+	private void incrementNumberOfWriteLocks() {
 		synchronized(countLock) {
 			numberOfWriters++;
 		}
 	}
-	public void decrementNumberOfWriteLocks() {
+	private void decrementNumberOfWriteLocks() {
 		synchronized(countLock) {
 			numberOfWriters--;
-		}
-	}
-	
-	public void incrementNumberOfReadersRequested() {
-		synchronized(countLock) {
-			numberOfReadersRequested++;
-		}
-	}
-	public void decrementNumberOfReadersRequested() {
-		synchronized(countLock) {
-			numberOfReadersRequested--;
-		}
-	}
-	
-	public void incrementNumberOfWritersRequested() {
-		synchronized(countLock) {
-			numberOfWritersRequested++;
-		}
-	}
-	public void decrementNumberOfWritersRequested() {
-		synchronized(countLock) {
-			numberOfWritersRequested--;
 		}
 	}
 }

@@ -14,8 +14,11 @@ import org.json.simple.parser.JSONParser;
 
 public class HotelDataBuilder {
 
+	private ThreadSafeHotelData tshdata;
 	
-	ThreadSafeHotelData hdata = new ThreadSafeHotelData();
+	public HotelDataBuilder(ThreadSafeHotelData tshdata) {
+		this.tshdata = tshdata;
+	}
 	
 	
 	/**
@@ -66,7 +69,7 @@ public class HotelDataBuilder {
 				double hotelLon = Double.parseDouble((String) jsonObjectHotelLL.get("lng"));
 				
 				// Add to the hotelsGivenByHotelId
-				hdata.addHotel(hotelId, hotelName, hotelCity, hotelState, hotelStreetAddress, hotelLat, hotelLon);
+				tshdata.addHotel(hotelId, hotelName, hotelCity, hotelState, hotelStreetAddress, hotelLat, hotelLon);
 				
 			}
 			
@@ -149,7 +152,7 @@ public class HotelDataBuilder {
 								username = "anonymous";
 							}
 							//Add review
-							hdata.addReview(hotelId, reviewId, rating, reviewTitle, reviewText, isRecom, date, username);
+							tshdata.addReview(hotelId, reviewId, rating, reviewTitle, reviewText, isRecom, date, username);
 						}
 					
 					} catch (org.json.simple.parser.ParseException e) {

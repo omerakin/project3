@@ -36,9 +36,8 @@ public class ThreadSafeHotelData {
 	private Address address;
 	private Review reviews;
 	private Boolean isSuccessful;
-	private List<String> hotelIdList;
 	
-	//Declared ReentrantReadWriteLock lock 
+	//Created ReentrantReadWriteLock lock object
 	private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
 	
 
@@ -77,7 +76,7 @@ public class ThreadSafeHotelData {
 		 * Here, I locked address and hotel variable, is that okey ?
 		 */
 		
-		//With the lockWrite it is added to our Hasmap safely
+		//With the lockWrite it is added to our HashMap safely
 		lock.lockWrite();
 		try {
 			//Set the values to the address and hotel object.
@@ -122,7 +121,7 @@ public class ThreadSafeHotelData {
 		 * Here, I have try inside of try, so is it okey ?
 		 */
 		
-		//With the lockRead it is added to our Hasmap safely
+		//With the lockWrite it is added to our HashMap safely
 		lock.lockWrite();
 		try {
 			// FILL IN CODE
@@ -172,30 +171,75 @@ public class ThreadSafeHotelData {
 		}
 		
 	}
+	
 
 	/**
-	 * Return an alphabetized list of the ids of all hotels
+	 * Read the json file with information about the hotels (id, name, address,
+	 * etc) and load it into the appropriate data structure(s). Note: This
+	 * method does not load reviews
 	 * 
-	 * @return
+	 * @param filename
+	 *            the name of the json file that contains information about the
+	 *            hotels
 	 */
-	public List<String> getHotels() {
-		// FILL IN CODE
-		//Initialise an ArrayList to store hotelIds
-		
-		//TODO: you'd better put all data structures at the first place
-		hotelIdList = new ArrayList<>();
-			
-		//Add hotelId to ArrayList
-		for (String hotelId: hotelsGivenByHotelId.keySet()){
-			hotelIdList.add(hotelId);
-		}
-		//Sort hotelIds
-		Collections.sort(hotelIdList);
-		//return it.
-		return hotelIdList; // don't forget to change it
-	}
+	public void loadHotelInfo(String jsonFilename) {
 
+		// Hint: Use JSONParser from JSONSimple library
+		// FILL IN CODE
+		
+		//Get the file directory and find the path
+		Path jsonFileNameDirectory = Paths.get(jsonFilename);
+		String jsonFilenameString = jsonFileNameDirectory.toAbsolutePath().toString();
+		
+		
+		JSONParser parser = new JSONParser(); 
+		try {
+			Object object = parser.parse(new FileReader(jsonFilenameString));
+			JSONObject jsonObject = (JSONObject) object;
+			
+			JSONArray listOfHotel = (JSONArray) jsonObject.get("sr");
+			JSONObject jsonObjectHotel;
+			
+			for (int i=0; i<listOfHotel.size();i++) {
+				jsonObjectHotel = (JSONObject) listOfHotel.get(i);
+				
+				// Get hotelId.
+				String hotelId = (String) jsonObjectHotel.get("id");
+				// Get hotelName.
+				String hotelName = (String) jsonObjectHotel.get("f");
+				// Get hotelCity.
+				String hotelCity = (String) jsonObjectHotel.get("ci");
+				// Get hotelState
+				String hotelState = (String) jsonObjectHotel.get("pr");
+				// Get hotelStreetAddress
+				String hotelStreetAddress = (String) jsonObjectHotel.get("ad");
+				//Create jsonObjectHotelLL to get Lat and Lng
+				JSONObject jsonObjectHotelLL = (JSONObject) jsonObjectHotel.get("ll");
+				// Get hotelLat
+				double hotelLat = Double.parseDouble((String) jsonObjectHotelLL.get("lat"));
+				// Get hotelLon
+				double hotelLon = Double.parseDouble((String) jsonObjectHotelLL.get("lng"));
+				
+				// Add to the hotelsGivenByHotelId
+				addHotel(hotelId, hotelName, hotelCity, hotelState, hotelStreetAddress, hotelLat, hotelLon);
+				
+			}
+			
+		} catch (FileNotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (org.json.simple.parser.ParseException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	
+	}
+	
+
+
 	/**
 	 * Load reviews for all the hotels into the appropriate data structure(s).
 	 * Traverse a given directory recursively to find all the json files with
@@ -283,6 +327,34 @@ public class ThreadSafeHotelData {
 	}
 
 
+
+	/**
+	 * Return an alphabetized list of the ids of all hotels
+	 * 
+	 * @return
+	 */
+	public List<String> getHotels() {
+		// FILL IN CODE
+		
+		//With the lockRead it is read from HashMap and written the local variable hotelIdList ArrayList
+		lock.lockRead();
+		try {
+			//Initialise an ArrayList to store hotelIds
+			List<String> hotelIdList = new ArrayList<>();
+			//Add hotelId to ArrayList
+			for (String hotelId: hotelsGivenByHotelId.keySet()){
+				hotelIdList.add(hotelId);
+			}
+			//Sort hotelIds
+			Collections.sort(hotelIdList);
+			//return it.
+			return hotelIdList; // don't forget to change it
+		} finally {
+			lock.unlockRead();
+		}
+		
+	}
+
 	/**
 	 * Returns a string representing information about the hotel with the given
 	 * id, including all the reviews for this hotel separated by
@@ -296,43 +368,40 @@ public class ThreadSafeHotelData {
 	 * @return - output string.
 	 */
 	public String toString(String hotelId) {
-
 		// FILL IN CODE
-		String result = "";
 		
-		for (String hotel_id_hotels: hotelsGivenByHotelId.keySet()){
-			if(hotel_id_hotels.equals(hotelId)){
-				result = result + hotelsGivenByHotelId.get(hotel_id_hotels).getHotel_name() + ": ";
-				result = result + hotelsGivenByHotelId.get(hotel_id_hotels).getHotel_id() + "\n";
-				result = result + hotelsGivenByHotelId.get(hotel_id_hotels).getAddress().getStreet_address() + "\n";
-				result = result + hotelsGivenByHotelId.get(hotel_id_hotels).getAddress().getCity() + ", ";
-				result = result + hotelsGivenByHotelId.get(hotel_id_hotels).getAddress().getState() + "\n";		
-			}
-		}
-		
-		for (String hotel_id_review: reviewsGivenByHotelId.keySet()){
-			if(hotel_id_review.equals(hotelId)){
-				for(Review hotelIdReview : reviewsGivenByHotelId.get(hotel_id_review)){
-					result = result + "--------------------\n";
-					result = result + "Review by " + hotelIdReview.getUsername() + ": ";
-					result = result + hotelIdReview.getRating() + "\n";
-					result = result + hotelIdReview.getReview_title() + "\n";
-					result = result + hotelIdReview.getReview_text() + "\n";
+		//With the lockRead it is written to the local variable result
+		lock.lockRead();
+		try {
+			String result = "";
+			
+			for (String hotel_id_hotels: hotelsGivenByHotelId.keySet()){
+				if(hotel_id_hotels.equals(hotelId)){
+					result = result + hotelsGivenByHotelId.get(hotel_id_hotels).getHotel_name() + ": ";
+					result = result + hotelsGivenByHotelId.get(hotel_id_hotels).getHotel_id() + "\n";
+					result = result + hotelsGivenByHotelId.get(hotel_id_hotels).getAddress().getStreet_address() + "\n";
+					result = result + hotelsGivenByHotelId.get(hotel_id_hotels).getAddress().getCity() + ", ";
+					result = result + hotelsGivenByHotelId.get(hotel_id_hotels).getAddress().getState() + "\n";		
 				}
-				
-				/*
-				for(int i=0; i<reviewsGivenByHotelId.get(hotel_id_review).size(); i++){
-					result = result + "--------------------\n";
-					result = result + "Review by " + reviewsGivenByHotelId.get(hotel_id_review).headSet(i) + ": ";
-					result = result + reviewsGivenByHotelId.get(hotel_id_review).getRating() + "\n";
-					result = result + reviewsGivenByHotelId.get(hotel_id_review).getReview_title() + "\n";
-					result = result + reviewsGivenByHotelId.get(hotel_id_review).getReview_text() + "\n";
-				}
-				*/
 			}
-		}
+			
+			for (String hotel_id_review: reviewsGivenByHotelId.keySet()){
+				if(hotel_id_review.equals(hotelId)){
+					for(Review hotelIdReview : reviewsGivenByHotelId.get(hotel_id_review)){
+						result = result + "--------------------\n";
+						result = result + "Review by " + hotelIdReview.getUsername() + ": ";
+						result = result + hotelIdReview.getRating() + "\n";
+						result = result + hotelIdReview.getReview_title() + "\n";
+						result = result + hotelIdReview.getReview_text() + "\n";
+					}
+				}
+			}
 
-		return result; // don't forget to change to the correct string
+			return result; // don't forget to change to the correct string
+		} finally {
+			lock.unlockRead();
+		}
+		
 	}
 
 	/**
@@ -348,20 +417,24 @@ public class ThreadSafeHotelData {
 	public void printToFile(Path filename) {
 		// FILL IN CODE
 
+		lock.lockRead();
 		try {
-			PrintWriter printWriter = new PrintWriter(new FileWriter(filename.toString()));
-			
-			for(String hotelid_info: getHotels()){
-				printWriter.println("\n********************");
-				printWriter.print(toString(hotelid_info));
+			try {
+				PrintWriter printWriter = new PrintWriter(new FileWriter(filename.toString()));
+				
+				for(String hotelid_info: getHotels()){
+					printWriter.println("\n********************");
+					printWriter.print(toString(hotelid_info));
+				}
+				printWriter.flush();
+				printWriter.close();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
 			}
-			printWriter.flush();
-			printWriter.close();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+		} finally {
+			lock.unlockRead();
 		}
 	}
 
 }
-//TODO: remove all System.out.print code if just for debugging

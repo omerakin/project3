@@ -17,21 +17,16 @@ public class ReentrantReadWriteLock {
 	// We should be able to find the number of read locks and the number of write locks 
 	// a thread with the given threadId is holding 
 	
-	private final static Object countLock = new Object();
-	private Map<Thread,Integer> readingThreads;
-	private Map<Thread,Integer> writingThread;
-	private volatile int numberOfReaders;
-	private volatile int numberOfWriters;
+	private Map<Long,Integer> readingThreads;
+	private Map<Long,Integer> writingThread;
 	
 	/**
 	 * Constructor for ReentrantReadWriteLock
 	 */
 	public ReentrantReadWriteLock() {
 		// FILL IN CODE
-		readingThreads = new HashMap<Thread,Integer>();
-		writingThread = new HashMap<Thread,Integer>();
-		numberOfReaders = 0;
-		numberOfWriters = 0;
+		readingThreads = new HashMap<Long,Integer>();
+		writingThread = new HashMap<Long,Integer>();
 	}
 
 	/**
@@ -41,8 +36,7 @@ public class ReentrantReadWriteLock {
 	 */
 	public synchronized boolean isReadLockHeldByCurrentThread() {
 		// FILL IN CODE
-		Thread currentthread = Thread.currentThread();
-		return readingThreads.containsKey(currentthread); // don't forget to change it
+		return readingThreads.containsKey(Thread.currentThread().getId()); // don't forget to change it
 	}
 
 	/**
@@ -52,8 +46,7 @@ public class ReentrantReadWriteLock {
 	 */
 	public synchronized boolean isWriteLockHeldByCurrentThread() {
 		// FILL IN CODE
-		Thread currentthread = Thread.currentThread();
-		return writingThread.containsKey(currentthread); // don't forget to change it
+		return writingThread.containsKey(Thread.currentThread().getId()); // don't forget to change it
 	}
 
 	/**
@@ -64,19 +57,23 @@ public class ReentrantReadWriteLock {
 	 */
 	public synchronized boolean tryAcquiringReadLock() {
 		// FILL IN CODE
-		Thread currentthread =Thread.currentThread();
-		if (writingThread.containsKey(Thread.currentThread())) {
+		
+		//Store the currentThread Id
+		Long currentthread =Thread.currentThread().getId();
+		//Check that current thread is same as writing thread
+		if (writingThread.containsKey(currentthread)) {
+			//if same,increase the number of this thread in readingThread maps and return true
 			getSetReadingCount(currentthread);
-			incrementNumberOfReadLocks();
 			return true;
-		} else if(numberOfWriters > 0) {
+		} else if(writingThread.size() > 0) {
+			// if current thread not same as writing thread and  
+			// also if already writing from other thread return false
 			return false;
 		} else {
+			// In other conditions, fill the readingThreads HashMap and return true
 			getSetReadingCount(currentthread);
-			incrementNumberOfReadLocks();
 			return true;
 		}
-		// don't forget to change it
 	}
 
 	/**
@@ -87,19 +84,23 @@ public class ReentrantReadWriteLock {
 	 */
 	public synchronized boolean tryAcquiringWriteLock() {
 		// FILL IN CODE
-		Thread currentthread = Thread.currentThread();
-		if (writingThread.containsKey(Thread.currentThread())) {
-			getWritingCount(currentthread);
-			incrementNumberOfWriteLocks();
+		
+		//Store the currentThread Id
+		Long currentthread = Thread.currentThread().getId();
+		//Check that current thread is same as writing thread
+		if (writingThread.containsKey(currentthread)) {
+			//if same,increase the number of this thread in writingThread maps and return true
+			getSetWritingCount(currentthread);
 			return true;
-		} else if (numberOfWriters > 0 || numberOfReaders > 0) {
+		} else if (writingThread.size() > 0 || readingThreads.size() > 0) {
+			// if current thread not same as writing thread and  
+			// also if already reading from other thread return false
 			return false;
 		} else {
-			getWritingCount(currentthread);
-			incrementNumberOfWriteLocks();
+			// In other conditions, fill the writingThread HashMap and return true
+			getSetWritingCount(currentthread);
 			return true;
 		}
-		// don't forget to change it
 	}
 
 	/**
@@ -121,7 +122,15 @@ public class ReentrantReadWriteLock {
 		
 	}
 
-	private Integer getSetReadingCount(Thread currentthread) {
+	/**
+	 * @param currentthread Get the threadId of thread and 
+	 * 			Checks that it is in the readingThreads HashMap
+	 * 					If exist, then increase the count of this thread
+	 * 					Else as a default, set it to 1
+	 * 					Then put the readingThreads HashMap 
+	 * @return null
+	 */
+	private Integer getSetReadingCount(Long currentthread) {
 		// TODO Auto-generated method stub
 		int count;
 		if(readingThreads.containsKey(currentthread)){
@@ -139,13 +148,12 @@ public class ReentrantReadWriteLock {
 	 */
 	public synchronized void unlockRead() {
 		// FILL IN CODE
-		Thread currentthread = Thread.currentThread();
+		Long currentthread = Thread.currentThread().getId();
 		if(readingThreads.get(currentthread) == 1){
 			readingThreads.remove(currentthread);
 		} else {
 			readingThreads.put(currentthread, readingThreads.get(currentthread) - 1);
-		}		
-		decrementNumberOfReadLocks();
+		}
 		notifyAll();
 	}
 
@@ -168,7 +176,15 @@ public class ReentrantReadWriteLock {
 		
 	}
 
-	private Integer getWritingCount(Thread currentthread) {
+	/**
+	 * @param currentthread Get the threadId of thread and 
+	 * 			Checks that it is in the writingThread HashMap
+	 * 					If exist, then increase the count of this thread
+	 * 					Else as a default, set it to 1
+	 * 					Then put the writingThread HashMap 
+	 * @return
+	 */
+	private Integer getSetWritingCount(Long currentthread) {
 		// TODO Auto-generated method stub
 		int count;
 		if(writingThread.containsKey(currentthread)){
@@ -186,35 +202,12 @@ public class ReentrantReadWriteLock {
 	 */
 	public synchronized void unlockWrite() {
 		// FILL IN CODE
-		Thread currentthread = Thread.currentThread();
+		Long currentthread = Thread.currentThread().getId();
 		if(writingThread.get(currentthread) == 1){
 			writingThread.remove(currentthread);
 		} else {
 			writingThread.put(currentthread, writingThread.get(currentthread) - 1);
 		}
-		decrementNumberOfWriteLocks();
 		notifyAll();
-	}
-	
-	private void incrementNumberOfReadLocks() {
-		synchronized(countLock) {
-			numberOfReaders++;
-		}
-	}
-	private void decrementNumberOfReadLocks() {
-		synchronized(countLock) {
-			numberOfReaders--;
-		}
-	}
-	
-	private void incrementNumberOfWriteLocks() {
-		synchronized(countLock) {
-			numberOfWriters++;
-		}
-	}
-	private void decrementNumberOfWriteLocks() {
-		synchronized(countLock) {
-			numberOfWriters--;
-		}
 	}
 }

@@ -145,7 +145,7 @@ public class HotelDataBuilder {
 				}
 				//merge local reviews to global review
 				/************************************************************************/
-				
+				 
 				
 			
 			} catch (org.json.simple.parser.ParseException e) {

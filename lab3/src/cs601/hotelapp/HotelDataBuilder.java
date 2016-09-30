@@ -7,19 +7,35 @@ import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 
+import cs601.concurrent.WorkQueue;
+
 public class HotelDataBuilder {
 
+	private static final Logger logger = LogManager.getLogger();
+	
 	private ThreadSafeHotelData tshdata;
+	private final WorkQueue workQueue;
+	private volatile int numTasks; // how many runnable tasks are pending
 	
 	public HotelDataBuilder(ThreadSafeHotelData tshdata) {
 		this.tshdata = tshdata;
+		workQueue = new WorkQueue();
+		numTasks = 0;
 	}
 	
+	public HotelDataBuilder(ThreadSafeHotelData tshdata, WorkQueue q) {
+		this.tshdata = tshdata;
+		workQueue = q;
+		numTasks = 0;
+	}
 	
 	/**
 	 * Read the json file with information about the hotels (id, name, address,
@@ -86,7 +102,66 @@ public class HotelDataBuilder {
 	
 	}
 
-	
+	private class LoadReviewsWorker implements Runnable {
+		private Path p;
+		private ThreadSafeHotelData localtshData;
+		LoadReviewsWorker(Path p) {
+			this.p = p;
+			incrementNumTasks();
+		}
+
+		@Override
+		public void run() {
+			// TODO Auto-generated method stub
+			
+			JSONParser jsonParser = new JSONParser();
+			try {
+				JSONObject jsonObject = (JSONObject) jsonParser.parse(new FileReader(p.toAbsolutePath().toString()));
+				
+				//reviewDetails Object
+				JSONObject reviewDetails = (JSONObject) jsonObject.get("reviewDetails");
+				//reviewCollection Object
+				JSONObject reviewCollection = (JSONObject) reviewDetails.get("reviewCollection");
+				//review Array
+				JSONArray review = (JSONArray) reviewCollection.get("review");
+				JSONObject reviewObject;
+				for(int i=0; i<review.size();i++){
+					reviewObject = (JSONObject) review.get(i);
+					
+					String hotelId = (String) reviewObject.get("hotelId");
+					String reviewId = (String) reviewObject.get("reviewId");
+					long ratingLong = (long) reviewObject.get("ratingOverall");
+					int rating = (int) ratingLong;
+					String reviewTitle = (String) reviewObject.get("title");
+					String reviewText = (String) reviewObject.get("reviewText");
+					boolean isRecom = ("YES" == (String) reviewObject.get("isRecommended"));
+					String date = (String) reviewObject.get("reviewSubmissionTime");								
+					String username = (String) reviewObject.get("userNickname");
+					if(username.equals("")){
+						username = "anonymous";
+					}
+					//Add local review
+					localtshData.addReview(hotelId, reviewId, rating, reviewTitle, reviewText, isRecom, date, username);
+				}
+				//merge local reviews to global review
+				/************************************************************************/
+				
+				
+			
+			} catch (org.json.simple.parser.ParseException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (FileNotFoundException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} finally {
+				decrementNumTask();
+			}
+		}
+	}
 
 	/**
 	 * Load reviews for all the hotels into the appropriate data structure(s).
@@ -101,77 +176,82 @@ public class HotelDataBuilder {
 	 */
 	public void loadReviews(Path path) {
 		// FILL IN CODE
-
-		// Hint: first, write a separate method to read a single json file with
-		// reviews
-		// using JSONSimple library
-		// Call this method from this one as you traverse directories and find
-		// json files
-
 		try {
 			DirectoryStream<Path> pathsList = Files.newDirectoryStream(path);
 			for(Path p : pathsList){
 				// check that file is directory or not.
 				if(!Files.isDirectory(p)){
-					// If not, then this is a json. Add it as review
-					JSONParser jsonParser = new JSONParser();
-					try {
-						JSONObject jsonObject = (JSONObject) jsonParser.parse(new FileReader(p.toAbsolutePath().toString()));
-						
-						//reviewDetails Object
-						JSONObject reviewDetails = (JSONObject) jsonObject.get("reviewDetails");
-						//reviewCollection Object
-						JSONObject reviewCollection = (JSONObject) reviewDetails.get("reviewCollection");
-						//review Array
-						JSONArray review = (JSONArray) reviewCollection.get("review");
-						JSONObject reviewObject;
-						for(int i=0; i<review.size();i++){
-							reviewObject = (JSONObject) review.get(i);
-							
-							String hotelId = (String) reviewObject.get("hotelId");
-							String reviewId = (String) reviewObject.get("reviewId");
-							long ratingLong = (long) reviewObject.get("ratingOverall");
-							int rating = (int) ratingLong;
-							String reviewTitle = (String) reviewObject.get("title");
-							String reviewText = (String) reviewObject.get("reviewText");
-							boolean isRecom = ("YES" == (String) reviewObject.get("isRecommended"));
-							String date = (String) reviewObject.get("reviewSubmissionTime");
-							
-							
-							/*
-							JSONArray managementResponses = (JSONArray) reviewObject.get("managementResponses");
-							String date = "";
-							if (managementResponses.size()>0) {
-								JSONObject managementResponsesObject = (JSONObject) managementResponses.get(0);
-								date = (String) managementResponsesObject.get("date");
-							}
-							*/
-							
-							String username = (String) reviewObject.get("userNickname");
-							if(username.equals("")){
-								username = "anonymous";
-							}
-							//Add review
-							tshdata.addReview(hotelId, reviewId, rating, reviewTitle, reviewText, isRecom, date, username);
-						}
-					
-					} catch (org.json.simple.parser.ParseException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
-					}
+					//send to Threads 
+					workQueue.execute(new LoadReviewsWorker(p));
 				} else if (Files.isDirectory(p)) {
 					// If it is, check the subfolders.
 					// this method get the paremeter path, and in it, check sub directories.
 					loadReviews(p);
 				}
 			}
-			
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
-		}
-	
-
+		} 
 	}
 
+	/**
+	 *  Wait for all pending work to finish
+	 */
+	public synchronized void waitUntilFinished() {
+		while(numTasks > 0) {
+			try {
+				wait();
+			} catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+	}
+	
+	/**
+	 * increment number of task in synchronised way
+	 */
+	public synchronized void incrementNumTasks() {
+		numTasks++;
+	}
+
+	/**
+	 * decrement number of task in synchronised way
+	 */
+	public synchronized void decrementNumTask() {
+		numTasks--;
+		if(numTasks <= 0){
+			notifyAll();
+		}
+	}
+
+	/**
+	 * Wait until there is no pending work, then shutdown the queue
+	 */
+	public synchronized void shutdown(){
+		waitUntilFinished();
+		workQueue.shutdown();
+	}
+	
+	/**
+	 * 
+	 * @param filename
+	 * 			- Path specifying where to save the output.
+	 */
+	public synchronized void printToFile(Path filename) {
+		waitUntilFinished();
+		tshdata.printToFile(filename);
+	}
+	
+	public static void main(String[] args) {
+		ThreadSafeHotelData tsData = new ThreadSafeHotelData();
+		HotelDataBuilder hotelDataBuilder = new HotelDataBuilder(tsData);
+		hotelDataBuilder.loadHotelInfo("input/hotels200.json");
+		hotelDataBuilder.loadReviews(Paths.get("input/reviews"));
+		hotelDataBuilder.waitUntilFinished();
+		hotelDataBuilder.printToFile(Paths.get("outputFile"));
+		hotelDataBuilder.shutdown();
+	}
+	
 }

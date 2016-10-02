@@ -14,6 +14,8 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
@@ -36,6 +38,7 @@ public class ThreadSafeHotelData {
 	private Address address;
 	private Review reviews;
 	private Boolean isSuccessful;
+	private static final Logger logger = LogManager.getLogger();
 	
 	//Created ReentrantReadWriteLock lock object
 	private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
@@ -147,9 +150,10 @@ public class ThreadSafeHotelData {
 				}
 			}
 			// If successful is true add it.
-			if(isSuccessful && hotelsGivenByHotelId.containsKey(hotelId)) {
+			//if(isSuccessful && hotelsGivenByHotelId.containsKey(hotelId)) {
+			if(isSuccessful) {
 				//Set the values to the reviews object.
-				reviews = new Review(reviewId, hotelId, reviewTitle, review, username, date, rating);			
+				reviews = new Review(reviewId, hotelId, reviewTitle, review, username, isRecom, date, rating);			
 				//Check that if hotel id already exist or not
 				if(!(reviewsGivenByHotelId.containsKey(hotelId))) {
 					TreeSet<Review> newReviewSet = new TreeSet<Review>();
@@ -243,6 +247,7 @@ public class ThreadSafeHotelData {
 
 			return result; // don't forget to change to the correct string
 		} finally {
+			
 			lock.unlockRead();
 		}
 		
@@ -267,6 +272,8 @@ public class ThreadSafeHotelData {
 				PrintWriter printWriter = new PrintWriter(new FileWriter(filename.toString()));
 				
 				for(String hotelid_info: getHotels()){
+					System.out.println(hotelid_info);
+					//logger.debug("hotelid_info " + hotelid_info);
 					printWriter.println("\n********************");
 					printWriter.print(toString(hotelid_info));
 				}
@@ -281,4 +288,38 @@ public class ThreadSafeHotelData {
 		}
 	}
 
+	/**
+	 * 
+	 * @param localtshData
+	 * 			- Second ThreadSafeHotelData will be merged with main ThreadSafeHotelData
+	 */
+	public void merge(ThreadSafeHotelData localtshData) {
+		// I locked with lockWrite. Otherwise, deadlock occur.
+		lock.lockWrite();
+		try {
+			for (String hotel_id_review: localtshData.getReviewsGivenByHotelId().keySet()){
+				for(Review hotelIdReview : localtshData.getReviewsGivenByHotelId().get(hotel_id_review)){
+					addReview(hotelIdReview.getHotel_id(), hotelIdReview.getReview_id(), 
+							hotelIdReview.getRating(), hotelIdReview.getReview_title(), 
+							hotelIdReview.getReview_text(), hotelIdReview.getIsRecom(), 
+							hotelIdReview.getDate(), hotelIdReview.getUsername());
+				}
+			}
+		} finally {
+			lock.unlockWrite();
+		}
+	}
+
+	/**
+	 * 
+	 * @return  - reviewsGivenByHotelId 
+	 */
+	private Map<String, TreeSet<Review>> getReviewsGivenByHotelId() {
+		lock.lockRead();
+		try{
+			return reviewsGivenByHotelId;
+		} finally {
+			lock.unlockRead();
+		}
+	}
 }

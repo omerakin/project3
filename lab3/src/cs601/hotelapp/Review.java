@@ -11,17 +11,19 @@ public class Review implements Comparable<Review>{
 	private String review_title;
 	private String review_text;
 	private String username;
+	private boolean isRecom;
 	private String date;
 	private int rating;
 	
 	public Review (String review_id, String hotel_id, String review_title,
-			String review_text, String username, String date, int rating){
+			String review_text, String username, boolean isRecom, String date, int rating){
 		
 		this.review_id = review_id;
 		this.hotel_id = hotel_id;
 		this.review_title = review_title;
 		this.review_text = review_text;
 		this.username = username;
+		this.isRecom = isRecom;
 		this.date = date;
 		this.rating = rating;
 		
@@ -105,6 +107,14 @@ public class Review implements Comparable<Review>{
 
 	public void setUsername(String username) {
 		this.username = username;
+	}
+
+	public boolean getIsRecom() {
+		return isRecom;
+	}
+
+	public void setIsRecom(boolean isRecom) {
+		this.isRecom = isRecom;
 	}
 
 	public String getDate() {

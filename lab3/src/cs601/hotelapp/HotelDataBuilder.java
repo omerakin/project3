@@ -107,6 +107,7 @@ public class HotelDataBuilder {
 		private ThreadSafeHotelData localtshData;
 		LoadReviewsWorker(Path p) {
 			this.p = p;
+			localtshData = new ThreadSafeHotelData();
 			incrementNumTasks();
 		}
 
@@ -137,19 +138,17 @@ public class HotelDataBuilder {
 					boolean isRecom = ("YES" == (String) reviewObject.get("isRecommended"));
 					String date = (String) reviewObject.get("reviewSubmissionTime");								
 					String username = (String) reviewObject.get("userNickname");
-					if(username.equals("")){
-						username = "anonymous";
-					}
+					if(username.equals("")){ username = "anonymous"; }
 					//Add local review
 					localtshData.addReview(hotelId, reviewId, rating, reviewTitle, reviewText, isRecom, date, username);
+					//tshdata.addReview(hotelId, reviewId, rating, reviewTitle, reviewText, isRecom, date, username);
 				}
 				//merge local reviews to global review
-				/************************************************************************/
-				 
-				
+				merge(localtshData);
 			
 			} catch (org.json.simple.parser.ParseException e) {
 				// TODO Auto-generated catch block
+				System.out.println(p.toString());
 				e.printStackTrace();
 			} catch (FileNotFoundException e) {
 				// TODO Auto-generated catch block
@@ -181,7 +180,7 @@ public class HotelDataBuilder {
 			for(Path p : pathsList){
 				// check that file is directory or not.
 				if(!Files.isDirectory(p)){
-					//send to Threads 
+					//send to Threads
 					workQueue.execute(new LoadReviewsWorker(p));
 				} else if (Files.isDirectory(p)) {
 					// If it is, check the subfolders.
@@ -192,7 +191,17 @@ public class HotelDataBuilder {
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
-		} 
+		}
+	}
+
+	/**
+	 * 
+	 * @param localtshData
+	 * 			- merge local reviews to global review
+	 */
+	public synchronized void merge(ThreadSafeHotelData localtshData) {
+		// TODO Auto-generated method stub
+		tshdata.merge(localtshData);
 	}
 
 	/**
@@ -214,6 +223,7 @@ public class HotelDataBuilder {
 	 */
 	public synchronized void incrementNumTasks() {
 		numTasks++;
+		//System.out.println(numTasks);
 	}
 
 	/**
@@ -221,6 +231,7 @@ public class HotelDataBuilder {
 	 */
 	public synchronized void decrementNumTask() {
 		numTasks--;
+		//System.out.println(numTasks);
 		if(numTasks <= 0){
 			notifyAll();
 		}
@@ -236,6 +247,14 @@ public class HotelDataBuilder {
 	
 	/**
 	 * 
+	 * @return numTasks - For testing, it is created.
+	 */
+	public synchronized int getNumTasks() {
+		return numTasks;
+	}
+
+	/**
+	 * 
 	 * @param filename
 	 * 			- Path specifying where to save the output.
 	 */
@@ -247,8 +266,10 @@ public class HotelDataBuilder {
 	public static void main(String[] args) {
 		ThreadSafeHotelData tsData = new ThreadSafeHotelData();
 		HotelDataBuilder hotelDataBuilder = new HotelDataBuilder(tsData);
+		//hotelDataBuilder.loadHotelInfo("inputLab1/hotels200.json");
+		//hotelDataBuilder.loadReviews(Paths.get("inputLab1/reviews"));
 		hotelDataBuilder.loadHotelInfo("input/hotels200.json");
-		hotelDataBuilder.loadReviews(Paths.get("input/reviews"));
+		hotelDataBuilder.loadReviews(Paths.get("input/reviews8000"));
 		hotelDataBuilder.waitUntilFinished();
 		hotelDataBuilder.printToFile(Paths.get("outputFile"));
 		hotelDataBuilder.shutdown();

@@ -223,7 +223,6 @@ public class HotelDataBuilder {
 	 */
 	public synchronized void incrementNumTasks() {
 		numTasks++;
-		//System.out.println(numTasks);
 	}
 
 	/**
@@ -231,7 +230,6 @@ public class HotelDataBuilder {
 	 */
 	public synchronized void decrementNumTask() {
 		numTasks--;
-		//System.out.println(numTasks);
 		if(numTasks <= 0){
 			notifyAll();
 		}
@@ -267,7 +265,7 @@ public class HotelDataBuilder {
 		ThreadSafeHotelData tsData = new ThreadSafeHotelData();
 		HotelDataBuilder hotelDataBuilder = new HotelDataBuilder(tsData);
 		//hotelDataBuilder.loadHotelInfo("inputLab1/hotels200.json");
-		//hotelDataBuilder.loadReviews(Paths.get("inputLab1/reviews"));
+		//hotelDataBuilder.loadReviews(Paths.get("input/reviews"));
 		hotelDataBuilder.loadHotelInfo("input/hotels200.json");
 		hotelDataBuilder.loadReviews(Paths.get("input/reviews8000"));
 		hotelDataBuilder.waitUntilFinished();

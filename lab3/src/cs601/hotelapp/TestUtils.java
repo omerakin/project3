@@ -1,8 +1,5 @@
 package cs601.hotelapp;
 
-
-import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
-
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
@@ -26,10 +23,10 @@ public class TestUtils {
     // Project Configuration
 
 	/** Configure this on your system if you want to have a longer timeout. */
-    public static final int TIMEOUT = 800000;
+    public static final int TIMEOUT = 200000;
     
 	
-    public static final String INPUT_DIR  = "input";
+    public static final String INPUT_DIR  = "input"; 
     public static final String OUTPUT_DIR = "test";
     public static final String RESULT_DIR = "results";
 
@@ -60,6 +57,7 @@ public class TestUtils {
 
             while (true) {
                 count++;
+
                 // compare lines until we hit a null (i.e. end of file)
                 if ((line1 != null) && (line2 != null)) {
                     // use consistent path separators
@@ -78,8 +76,6 @@ public class TestUtils {
                     // read next lines if we get this far
                     line1 = reader1.readLine();
                     line2 = reader2.readLine();
-                    
-                    
                 }
                 else {
                     // discard extra blank lines at end of reader1

@@ -272,7 +272,7 @@ public class ThreadSafeHotelData {
 				PrintWriter printWriter = new PrintWriter(new FileWriter(filename.toString()));
 				
 				for(String hotelid_info: getHotels()){
-					System.out.println(hotelid_info);
+					//System.out.println(hotelid_info);
 					//logger.debug("hotelid_info " + hotelid_info);
 					printWriter.println("\n********************");
 					printWriter.print(toString(hotelid_info));
@@ -294,7 +294,7 @@ public class ThreadSafeHotelData {
 	 * 			- Second ThreadSafeHotelData will be merged with main ThreadSafeHotelData
 	 */
 	public void merge(ThreadSafeHotelData localtshData) {
-		// I locked with lockWrite. Otherwise, deadlock occur.
+		// I locked with lockWrite. Otherwise, deadlock occurs.
 		lock.lockWrite();
 		try {
 			for (String hotel_id_review: localtshData.getReviewsGivenByHotelId().keySet()){

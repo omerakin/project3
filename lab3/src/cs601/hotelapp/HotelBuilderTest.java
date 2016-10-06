@@ -15,7 +15,7 @@ public class HotelBuilderTest {
 
 	private static final int RUNS = 5;
 	private static final int THREADS = 5;
-    public static final int TIMEOUT = 60000;
+    public static final int TIMEOUT = 6000;
 
    
 	@Test(timeout = TestUtils.TIMEOUT)
@@ -199,7 +199,7 @@ public class HotelBuilderTest {
 		builder.loadReviews(Paths.get(TestUtils.INPUT_DIR + File.separator + "reviews8000")); 
 		Path actual = Paths.get(TestUtils.OUTPUT_DIR + File.separator + "studentOutput8000");  // your output
 		builder.printToFile(actual);
-
+		
 		builder.shutdown();
 		Path expected = Paths.get(TestUtils.OUTPUT_DIR + File.separator + "expectedOutput8000"); // instructor's
 																								// output

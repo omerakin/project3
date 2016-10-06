@@ -221,33 +221,29 @@ public class ThreadSafeHotelData {
 		//With the lockRead it is written to the local variable result
 		lock.lockRead();
 		try {
-			String result = "";
-			
+			StringBuffer stringBuffer = new StringBuffer();
 			for (String hotel_id_hotels: hotelsGivenByHotelId.keySet()){
 				if(hotel_id_hotels.equals(hotelId)){
-					result = result + hotelsGivenByHotelId.get(hotel_id_hotels).getHotel_name() + ": ";
-					result = result + hotelsGivenByHotelId.get(hotel_id_hotels).getHotel_id() + "\n";
-					result = result + hotelsGivenByHotelId.get(hotel_id_hotels).getAddress().getStreet_address() + "\n";
-					result = result + hotelsGivenByHotelId.get(hotel_id_hotels).getAddress().getCity() + ", ";
-					result = result + hotelsGivenByHotelId.get(hotel_id_hotels).getAddress().getState() + "\n";		
+					stringBuffer.append(hotelsGivenByHotelId.get(hotel_id_hotels).getHotel_name() + ": "
+							+ hotelsGivenByHotelId.get(hotel_id_hotels).getHotel_id() + "\n"
+							+ hotelsGivenByHotelId.get(hotel_id_hotels).getAddress().getStreet_address() + "\n"
+							+ hotelsGivenByHotelId.get(hotel_id_hotels).getAddress().getCity() + ", "
+							+ hotelsGivenByHotelId.get(hotel_id_hotels).getAddress().getState() + "\n");		
 				}
 			}
-			
 			for (String hotel_id_review: reviewsGivenByHotelId.keySet()){
 				if(hotel_id_review.equals(hotelId)){
 					for(Review hotelIdReview : reviewsGivenByHotelId.get(hotel_id_review)){
-						result = result + "--------------------\n";
-						result = result + "Review by " + hotelIdReview.getUsername() + ": ";
-						result = result + hotelIdReview.getRating() + "\n";
-						result = result + hotelIdReview.getReview_title() + "\n";
-						result = result + hotelIdReview.getReview_text() + "\n";
+						stringBuffer.append("--------------------\n"
+								+ "Review by " + hotelIdReview.getUsername() + ": "
+								+ hotelIdReview.getRating() + "\n"
+								+ hotelIdReview.getReview_title() + "\n"
+								+ hotelIdReview.getReview_text() + "\n");
 					}
 				}
 			}
-
-			return result; // don't forget to change to the correct string
+			return stringBuffer.toString(); // don't forget to change to the correct string
 		} finally {
-			
 			lock.unlockRead();
 		}
 		
@@ -270,10 +266,7 @@ public class ThreadSafeHotelData {
 		try {
 			try {
 				PrintWriter printWriter = new PrintWriter(new FileWriter(filename.toString()));
-				
 				for(String hotelid_info: getHotels()){
-					//System.out.println(hotelid_info);
-					//logger.debug("hotelid_info " + hotelid_info);
 					printWriter.println("\n********************");
 					printWriter.print(toString(hotelid_info));
 				}
@@ -298,11 +291,8 @@ public class ThreadSafeHotelData {
 		lock.lockWrite();
 		try {
 			for (String hotel_id_review: localtshData.getReviewsGivenByHotelId().keySet()){
-				for(Review hotelIdReview : localtshData.getReviewsGivenByHotelId().get(hotel_id_review)){
-					addReview(hotelIdReview.getHotel_id(), hotelIdReview.getReview_id(), 
-							hotelIdReview.getRating(), hotelIdReview.getReview_title(), 
-							hotelIdReview.getReview_text(), hotelIdReview.getIsRecom(), 
-							hotelIdReview.getDate(), hotelIdReview.getUsername());
+				if(hotelsGivenByHotelId.containsKey(hotel_id_review)){
+					reviewsGivenByHotelId.put(hotel_id_review, localtshData.getReviewsGivenByHotelId().get(hotel_id_review));
 				}
 			}
 		} finally {

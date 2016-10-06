@@ -23,7 +23,7 @@ public class TestUtils {
     // Project Configuration
 
 	/** Configure this on your system if you want to have a longer timeout. */
-    public static final int TIMEOUT = 200000;
+    public static final int TIMEOUT = 50000;
     
 	
     public static final String INPUT_DIR  = "input"; 

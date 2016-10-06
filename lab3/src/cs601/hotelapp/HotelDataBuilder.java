@@ -256,7 +256,7 @@ public class HotelDataBuilder {
 	 * @param filename
 	 * 			- Path specifying where to save the output.
 	 */
-	public synchronized void printToFile(Path filename) {
+	public void printToFile(Path filename) {
 		waitUntilFinished();
 		tshdata.printToFile(filename);
 	}

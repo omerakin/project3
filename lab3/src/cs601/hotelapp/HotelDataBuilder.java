@@ -180,6 +180,7 @@ public class HotelDataBuilder {
 			DirectoryStream<Path> pathsList = Files.newDirectoryStream(path);
 			for(Path p : pathsList){
 				// check that file is directory or not.
+				// TODO You should make sure that you only build review from ".json" file.
 				if(!Files.isDirectory(p)){
 					//send to Threads
 					workQueue.execute(new LoadReviewsWorker(p));
